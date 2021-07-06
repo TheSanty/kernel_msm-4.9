@@ -1438,6 +1438,48 @@ static int qpnp_pwm_enable(struct pwm_chip *pwm_chip,
  * qpnp_pwm_disable - stop a PWM output toggling
  * @pwm_chip: the PWM chip
  * @pwm: the PWM device
+*/
+int pwm_enable_synchronized(struct pwm_device **pwms, size_t num)
+{
+	unsigned long *flags;
+	struct qpnp_pwm_chip **chips;
+	int rc = 0, i;
+
+	if (pwms == NULL || IS_ERR(pwms) || num == 0) {
+		pr_err("Invalid pwm handle or idx_len=0\n");
+		return -EINVAL;
+	}
+
+	flags = kzalloc(sizeof(unsigned long) * num, GFP_KERNEL);
+	if (!flags)
+		return -ENOMEM;
+
+	chips = kzalloc(sizeof(struct qpnp_pwm_chip *) * num, GFP_KERNEL);
+	if (!chips) {
+		kfree(flags);
+		return -ENOMEM;											}
+
+	for (i = 0; i < num; i++) {											chips[i] = qpnp_pwm_from_pwm_dev(pwms[i]);
+		if (chips[i] == NULL) {												rc = -EINVAL;
+			goto err_failed;										}										
+		spin_lock_irqsave(&chips[i]->lpg_lock, flags[i]);						}
+
+	rc = qpnp_lpg_configure_lut_states(chips, num, QPNP_LUT_ENABLE);
+
+err_failed:
+	while(i > 0) {
+		spin_unlock_irqrestore(&chips[i - 1]->lpg_lock, flags[i - 1]);						i--;
+	}	
+	kfree(flags);
+	kfree(chips);
+	return rc;
+}
+EXPORT_SYMBOL_GPL(pwm_enable_synchronized);
+
+/**
+ * qpnp_pwm_disable - stop a PWM output toggling
+ * @pwm_chip: the PWM chip
+ * @pwm: the PWM device
  */
 static void qpnp_pwm_disable(struct pwm_chip *pwm_chip,
 		struct pwm_device *pwm)
