@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2018, 2020-2021, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -1468,13 +1468,6 @@ static int msm_release(struct inode *inode, struct file *filp)
 		kfree(node);
 	}
 
-	msm_preclose(dev, file_priv);
-
-       /**
-	* Handle preclose operation here for removing fb's whose
-	* refcount > 1. This operation is not triggered from upstream
-	* drm as msm_driver does not support DRIVER_LEGACY feature.
-	*/
 	ret = drm_release(inode, filp);
 	filp->private_data = NULL;
 end:
